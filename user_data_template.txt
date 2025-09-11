@@ -1,0 +1,108 @@
+#cloud-config
+
+# Hostname configuration
+hostname: ${CLIENT_NAME}-n8n
+fqdn: ${CLIENT_NAME}-n8n.${DOMAIN}
+preserve_hostname: true
+
+# User configuration
+users:
+  - name: ubuntu
+    ssh_authorized_keys:
+      - ${SSH_KEY}
+    sudo: ALL=(ALL) NOPASSWD:ALL
+    groups: sudo
+    shell: /bin/bash
+
+# System files
+write_files:
+  - path: /etc/hosts
+    content: |
+      127.0.0.1 localhost
+      127.0.1.1 ${CLIENT_NAME}-n8n ${CLIENT_NAME}-n8n.${DOMAIN}
+    append: false
+    permissions: '0644'
+
+  - path: /home/n8n/.n8n/config
+    content: |
+      {
+        "database": {
+          "type": "sqlite",
+          "database": "/home/n8n/.n8n/database.sqlite"
+        },
+        "endpoints": {
+          "webhook": "https://${CLIENT_NAME}-n8n.${DOMAIN}/",
+          "rest": "https://${CLIENT_NAME}-n8n.${DOMAIN}/"
+        },
+        "nodes": {
+          "exclude": []
+        },
+        "userManagement": {
+          "disabled": true
+        }
+      }
+    permissions: '0644'
+    owner: n8n:n8n
+
+  - path: /etc/environment
+    content: |
+      N8N_HOST=0.0.0.0
+      N8N_PORT=5678
+      N8N_PROTOCOL=http
+      WEBHOOK_URL=https://${CLIENT_NAME}-n8n.${DOMAIN}/
+      N8N_USER_FOLDER=/home/n8n/.n8n
+      CLIENT_NAME=${CLIENT_NAME}
+    append: true
+
+# Package installation
+packages:
+  - htop
+  - curl
+  - wget
+  - ufw
+  - unzip
+  - git
+  - nano
+
+# Commands to run after boot
+runcmd:
+  # Setup n8n for this client
+  - /opt/setup-n8n.sh ${CLIENT_NAME} ${DOMAIN}
+  
+  # Configure firewall
+  - ufw allow 22/tcp
+  - ufw allow 80/tcp
+  - ufw allow 443/tcp
+  - ufw --force enable
+  
+  # Set proper permissions
+  - chown -R n8n:n8n /home/n8n
+  - chmod 755 /home/n8n
+  
+  # Update system
+  - apt-get update
+  - apt-get upgrade -y
+  - apt-get autoremove -y
+  
+  # Disable cloud-init after first run
+  - touch /etc/cloud/cloud-init.disabled
+  - systemctl disable cloud-init
+  - systemctl disable cloud-init-local
+  - systemctl disable cloud-config
+  - systemctl disable cloud-final
+  
+  # Ensure services are running
+  - systemctl daemon-reload
+  - systemctl enable n8n
+  - systemctl start n8n
+  - systemctl reload nginx
+  
+  # Log completion
+  - echo "n8n setup completed for ${CLIENT_NAME}" >> /var/log/setup-complete.log
+  - date >> /var/log/setup-complete.log
+
+# Power state
+power_state:
+  mode: reboot
+  delay: now
+  timeout: 30

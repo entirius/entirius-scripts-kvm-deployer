@@ -1,0 +1,42 @@
+[Unit]
+Description=n8n workflow automation for CLIENT_NAME
+Documentation=https://docs.n8n.io
+After=network.target
+Wants=network.target
+
+[Service]
+Type=simple
+User=n8n
+Group=n8n
+WorkingDirectory=/home/n8n
+Environment=N8N_HOST=0.0.0.0
+Environment=N8N_PORT=5678
+Environment=N8N_PROTOCOL=http
+Environment=WEBHOOK_URL=https://CLIENT_NAME-n8n.DOMAIN/
+Environment=N8N_USER_FOLDER=/home/n8n/.n8n
+Environment=N8N_LOG_LEVEL=info
+Environment=N8N_LOG_OUTPUT=file
+Environment=N8N_LOG_FILE=/home/n8n/.n8n/n8n.log
+Environment=NODE_ENV=production
+ExecStart=/usr/bin/n8n start
+ExecReload=/bin/kill -HUP $MAINPID
+KillMode=process
+Restart=on-failure
+RestartSec=5
+TimeoutSec=30
+
+# Security settings
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/home/n8n
+CapabilityBoundingSet=CAP_NET_BIND_SERVICE
+AmbientCapabilities=CAP_NET_BIND_SERVICE
+
+# Resource limits
+LimitNOFILE=65536
+LimitNPROC=4096
+
+[Install]
+WantedBy=multi-user.target
