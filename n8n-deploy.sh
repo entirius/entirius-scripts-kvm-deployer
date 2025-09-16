@@ -53,7 +53,7 @@ fi
 # Check if SSH key exists
 if [ ! -f "$SSH_KEY_FILE" ]; then
     echo "Error: SSH public key not found at $SSH_KEY_FILE"
-    echo "Generate one with: ssh-keygen -t rsa -b 4096"
+    echo "Generate one with: ssh-keygen -t ed25519 -C \"your-email@example.com\""
     exit 1
 fi
 

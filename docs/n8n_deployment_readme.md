@@ -79,8 +79,8 @@ VM_STORAGE_PATH="/var/lib/libvirt/images" # VM storage location
 Ensure you have SSH key pair generated:
 
 ```bash
-# If you don't have SSH keys:
-ssh-keygen -t rsa -b 4096 -C "your-email@example.com"
+# If you don't have SSH keys (using ED25519 per ADR-018):
+ssh-keygen -t ed25519 -C "your-email@example.com"
 ```
 
 ## Usage

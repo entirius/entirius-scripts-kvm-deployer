@@ -1,178 +1,178 @@
-# Wymagania instalacyjne entirius-scripts-kvm-deployer
+# Installation Requirements for entirius-scripts-kvm-deployer
 
-## Wymagania systemowe
+## System Requirements
 
-### System operacyjny
-- **Ubuntu 24.04** (host z KVM/libvirt)
-- Dostęp do internetu do pobierania pakietów
+### Operating System
+- **Ubuntu 24.04** (host with KVM/libvirt)
+- Internet access for downloading packages
 
-### Wymagane narzędzia i pakiety
+### Required Tools and Packages
 
-#### Podstawowe pakiety systemowe
+#### Basic System Packages
 ```bash
 sudo apt update
 sudo apt install -y qemu-kvm libvirt-daemon-system virtinst guestfs-tools gettext-base
 ```
 
-#### Szczegółowe wymagania pakietów:
-- **qemu-kvm** - główna platforma wirtualizacji KVM
-- **libvirt-daemon-system** - daemon zarządzania maszynami wirtualnymi
-- **virtinst** - narzędzia do instalacji maszyn wirtualnych (`virt-install`)
-- **guestfs-tools** - narzędzia do modyfikacji obrazów VM (`virt-customize`)
-- **gettext-base** - zawiera `envsubst` do przetwarzania szablonów
+#### Detailed Package Requirements:
+- **qemu-kvm** - main KVM virtualization platform
+- **libvirt-daemon-system** - virtual machine management daemon
+- **virtinst** - virtual machine installation tools (`virt-install`)
+- **guestfs-tools** - VM image modification tools (`virt-customize`)
+- **gettext-base** - contains `envsubst` for template processing
 
-#### Uprawnienia użytkownika
+#### User Permissions
 ```bash
 sudo usermod -a -G libvirt $(whoami)
-# Wyloguj się i zaloguj ponownie lub uruchom:
+# Log out and log back in or run:
 newgrp libvirt
 ```
 
-### Obraz bazowy Ubuntu Cloud
+### Ubuntu Cloud Base Image
 ```bash
 wget https://cloud-images.ubuntu.com/releases/24.04/release/ubuntu-24.04-server-cloudimg-amd64.img
 ```
 
-### Klucze SSH
-Wymagany jest klucz SSH do dostępu do tworzonych maszyn wirtualnych:
+### SSH Keys
+SSH key is required for access to created virtual machines:
 ```bash
-# Jeśli nie masz kluczy SSH:
-ssh-keygen -t rsa -b 4096 -C "your-email@example.com"
+# If you don't have SSH keys (using ED25519 according to ADR-018):
+ssh-keygen -t ed25519 -C "your-email@example.com"
 ```
 
-## Konfiguracja środowiska
+## Environment Configuration
 
-### Ścieżki przechowywania
-- **Domyślna ścieżka VM**: `/var/lib/libvirt/images`
-- **Pliki robocze**: bieżący katalog roboczy
+### Storage Paths
+- **Default VM path**: `/var/lib/libvirt/images`
+- **Working files**: current working directory
 
-### Wymagane uprawnienia
-- Użytkownik musi należeć do grupy `libvirt`
-- Dostęp do `sudo` dla operacji `virt-customize`
-- Uprawnienia zapisu w `/var/lib/libvirt/images`
+### Required Permissions
+- User must belong to the `libvirt` group
+- Access to `sudo` for `virt-customize` operations
+- Write permissions in `/var/lib/libvirt/images`
 
-### Konfiguracja sieci
-- Sieć libvirt `default` musi być aktywna
-- Domyślnie używa NAT/bridge networking
+### Network Configuration
+- Libvirt `default` network must be active
+- Uses NAT/bridge networking by default
 
-## Pliki projektu
+## Project Files
 
-### Skrypty wykonywalne
-Po pobraniu plików ustaw uprawnienia wykonywalne:
+### Executable Scripts
+After downloading files, set executable permissions:
 ```bash
 chmod +x create_template_script.sh n8n-deploy.sh setup_n8n_script.sh
 ```
 
-### Struktura plików
+### File Structure
 ```
 entirius-scripts-kvm-deployer/
-├── create_template_script.sh          # Tworzenie szablonu VM
-├── n8n-deploy.sh                     # Wdrażanie instancji klientów
-├── n8n-deploy.config.example         # Przykład pliku konfiguracyjnego
-├── setup_n8n_script.sh              # Konfiguracja n8n
+├── create_template_script.sh          # VM template creation
+├── n8n-deploy.sh                     # Client instance deployment
+├── n8n-deploy.config.example         # Configuration file example
+├── setup_n8n_script.sh              # n8n configuration
 ├── templates/
 │   └── n8n/
-│       ├── user_data_template.txt    # Szablon cloud-init
-│       ├── n8n_service_template.txt  # Szablon usługi systemd
-│       └── nginx_config_template.txt # Szablon konfiguracji nginx
-└── ubuntu-24.04-server-cloudimg-amd64.img  # Obraz bazowy Ubuntu (opcjonalny)
+│       ├── user_data_template.txt    # cloud-init template
+│       ├── n8n_service_template.txt  # systemd service template
+│       └── nginx_config_template.txt # nginx configuration template
+└── ubuntu-24.04-server-cloudimg-amd64.img  # Ubuntu base image (optional)
 ```
 
-## Parametry konfiguracyjne
+## Configuration Parameters
 
-### Konfiguracja w pliku `n8n-deploy.config`:
+### Configuration in `n8n-deploy.config` file:
 
-Skopiuj i edytuj plik konfiguracyjny:
+Copy and edit the configuration file:
 ```bash
 cp n8n-deploy.config.example n8n-deploy.config
 vim n8n-deploy.config
 ```
 
-Dostępne parametry konfiguracyjne:
+Available configuration parameters:
 ```bash
-# Konfiguracja domeny
-DOMAIN="yourdomain.com"           # Twoja domena
+# Domain configuration
+DOMAIN="yourdomain.com"           # Your domain
 
-# Konfiguracja VM
-TEMPLATE_IMAGE="n8n-template.img" # Ścieżka obrazu szablonu
-VM_STORAGE_PATH="/var/lib/libvirt/images" # Lokalizacja przechowywania VM
-VM_MEMORY=1024                    # Pamięć RAM w MB
-VM_VCPUS=1                       # Liczba CPU
+# VM configuration
+TEMPLATE_IMAGE="n8n-template.img" # Template image path
+VM_STORAGE_PATH="/var/lib/libvirt/images" # VM storage location
+VM_MEMORY=1024                    # RAM memory in MB
+VM_VCPUS=1                       # Number of CPUs
 
-# Konfiguracja SSH
-SSH_KEY_FILE="$HOME/.ssh/id_rsa.pub" # Ścieżka do klucza publicznego SSH
+# SSH configuration
+SSH_KEY_FILE="$HOME/.ssh/id_ed25519.pub" # Path to SSH public key
 ```
 
-## Zasoby systemowe
+## System Resources
 
-### Specyfikacje VM
-- **Pamięć**: 1024 MB (domyślnie, konfigurowalne)
-- **CPU**: 1 vCPU (domyślnie, konfigurowalne)
-- **Dysk**: ~2-3GB na podstawie rozmiaru szablonu
-- **Sieć**: Bridge/NAT (domyślna sieć libvirt)
+### VM Specifications
+- **Memory**: 1024 MB (default, configurable)
+- **CPU**: 1 vCPU (default, configurable)
+- **Disk**: ~2-3GB based on template size
+- **Network**: Bridge/NAT (default libvirt network)
 
-### Wymagania dyskowe
-- **Szablon VM**: ~2-3GB
-- **Każda instancja klienta**: ~2-3GB
-- **Miejsce robocze**: dodatkowe 1GB na pliki tymczasowe
+### Disk Requirements
+- **VM Template**: ~2-3GB
+- **Each client instance**: ~2-3GB
+- **Working space**: additional 1GB for temporary files
 
-## Składniki oprogramowania w VM
+## Software Components in VM
 
-### Automatycznie instalowane w szablonie:
-- **Node.js 20.x** - środowisko uruchomieniowe dla n8n
-- **n8n** - platforma automatyzacji workflow
-- **PM2** - manager procesów Node.js
-- **nginx** - serwer web/reverse proxy
-- **Pakiety systemowe**: curl, wget, gnupg
+### Automatically installed in template:
+- **Node.js 20.x** - runtime environment for n8n
+- **n8n** - workflow automation platform
+- **PM2** - Node.js process manager
+- **nginx** - web server/reverse proxy
+- **System packages**: curl, wget, gnupg
 
-### Konfiguracje bezpieczeństwa:
-- **UFW firewall** - porty 22, 80, 443
-- **Klucze SSH** - wyłącznie autoryzacja kluczami
-- **Nagłówki bezpieczeństwa nginx** - X-Frame-Options, CSP
-- **Izolacja usług** - dedykowany użytkownik `n8n`
+### Security configurations:
+- **UFW firewall** - ports 22, 80, 443
+- **SSH keys** - key-based authentication only
+- **nginx security headers** - X-Frame-Options, CSP
+- **Service isolation** - dedicated `n8n` user
 
-## Weryfikacja instalacji
+## Installation Verification
 
-### Sprawdzenie wymagań:
+### Requirements check:
 ```bash
-# Sprawdź KVM
+# Check KVM
 kvm-ok
 
-# Sprawdź libvirt
+# Check libvirt
 sudo systemctl status libvirtd
 
-# Sprawdź narzędzia
+# Check tools
 which virt-install virt-customize envsubst
 
-# Sprawdź sieć
+# Check network
 sudo virsh net-list --all
 ```
 
-### Test podstawowej funkcjonalności:
+### Basic functionality test:
 ```bash
-# Lista VM
+# VM list
 virsh list --all
 
-# Informacje o sieci DHCP
+# DHCP network information
 virsh net-dhcp-leases default
 ```
 
-## Integracja z WebVirtCloud
+## WebVirtCloud Integration
 
-System jest w pełni kompatybilny z WebVirtCloud do scentralizowanego zarządzania:
-- **Automatyczne wykrywanie VM** - wszystkie VM pojawią się z właściwym nazewnictwem
-- **Dostęp do konsoli** - konsola VNC przez interfejs web
-- **Zarządzanie zasilaniem** - start/stop/restart przez WebVirtCloud
-- **Monitorowanie** - monitorowanie wykorzystania zasobów
+The system is fully compatible with WebVirtCloud for centralized management:
+- **Automatic VM discovery** - all VMs will appear with proper naming
+- **Console access** - VNC console through web interface
+- **Power management** - start/stop/restart through WebVirtCloud
+- **Monitoring** - resource usage monitoring
 
-## Wsparcie i rozwiązywanie problemów
+## Support and Troubleshooting
 
-### Logi systemowe:
-- **Cloud-init**: `/var/log/cloud-init-output.log` (w VM)
-- **n8n service**: `sudo journalctl -u n8n -f` (w VM)
-- **nginx**: `/var/log/nginx/` (w VM)
+### System logs:
+- **Cloud-init**: `/var/log/cloud-init-output.log` (in VM)
+- **n8n service**: `sudo journalctl -u n8n -f` (in VM)
+- **nginx**: `/var/log/nginx/` (in VM)
 
-### Diagnostyka:
-- **Status VM**: `virsh list --all`
-- **Konsola VM**: `virsh console vm-name`
-- **Adres IP**: `virsh net-dhcp-leases default`
+### Diagnostics:
+- **VM status**: `virsh list --all`
+- **VM console**: `virsh console vm-name`
+- **IP address**: `virsh net-dhcp-leases default`

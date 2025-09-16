@@ -11,4 +11,4 @@ VM_MEMORY=1024
 VM_VCPUS=1
 
 # SSH configuration
-SSH_KEY_FILE="$HOME/.ssh/id_rsa.pub"
+SSH_KEY_FILE="$HOME/.ssh/id_ed25519.pub"
