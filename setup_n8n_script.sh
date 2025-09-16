@@ -18,12 +18,12 @@ echo "Setting up n8n for client: $CLIENT_NAME"
 # Create systemd service file from template
 echo "Creating systemd service file..."
 sed "s/CLIENT_NAME/$CLIENT_NAME/g; s/DOMAIN/$DOMAIN/g" \
-    /opt/n8n.service.template > /etc/systemd/system/n8n.service
+    /opt/n8n_service_template.txt > /etc/systemd/system/n8n.service
 
 # Create nginx configuration from template
 echo "Creating nginx configuration..."
 sed "s/CLIENT_NAME/$CLIENT_NAME/g; s/DOMAIN/$DOMAIN/g" \
-    /opt/nginx-n8n.conf.template > /etc/nginx/sites-available/${CLIENT_NAME}-n8n
+    /opt/nginx_config_template.txt > /etc/nginx/sites-available/${CLIENT_NAME}-n8n
 
 # Enable nginx site
 ln -sf /etc/nginx/sites-available/${CLIENT_NAME}-n8n \

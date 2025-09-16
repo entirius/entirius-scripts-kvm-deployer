@@ -1,7 +1,7 @@
 #!/bin/bash
 
-# deploy-client.sh - Deploy n8n instance for a specific client
-# Usage: ./deploy-client.sh <client-name>
+# n8n-deploy.sh - Deploy n8n instance for a specific client
+# Usage: ./n8n-deploy.sh <client-name>
 
 set -e
 
@@ -61,7 +61,7 @@ SSH_KEY="$(cat $SSH_KEY_FILE)"
 export CLIENT_NAME DOMAIN SSH_KEY
 
 echo "Generating cloud-init configuration..."
-envsubst < user-data-template.yaml > "/tmp/${VM_NAME}-user-data.yaml"
+envsubst < templates/n8n/user_data_template.txt > "/tmp/${VM_NAME}-user-data.yaml"
 
 echo "Copying template to VM disk..."
 sudo cp "$TEMPLATE_IMAGE" "$VM_DISK_PATH"

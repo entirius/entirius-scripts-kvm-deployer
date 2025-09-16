@@ -18,7 +18,7 @@ if [ ! -f "$BASE_IMAGE" ]; then
 fi
 
 # Check if template files exist
-for file in n8n.service.template nginx-n8n.conf.template setup-n8n.sh; do
+for file in templates/n8n/n8n_service_template.txt templates/n8n/nginx_config_template.txt setup_n8n_script.sh; do
     if [ ! -f "$file" ]; then
         echo "Error: Required file $file not found!"
         exit 1
@@ -41,10 +41,10 @@ sudo virt-customize -a "$TEMPLATE_IMAGE" \
     --run-command 'npm install -g n8n pm2' \
     --run-command 'useradd -m -s /bin/bash n8n' \
     --run-command 'systemctl enable nginx' \
-    --copy-in n8n.service.template:/opt/ \
-    --copy-in nginx-n8n.conf.template:/opt/ \
-    --copy-in setup-n8n.sh:/opt/ \
-    --chmod 0755:/opt/setup-n8n.sh \
+    --copy-in templates/n8n/n8n_service_template.txt:/opt/n8n_service_template.txt \
+    --copy-in templates/n8n/nginx_config_template.txt:/opt/nginx_config_template.txt \
+    --copy-in setup_n8n_script.sh:/opt/setup_n8n_script.sh \
+    --chmod 0755:/opt/setup_n8n_script.sh \
     --run-command 'rm -rf /etc/nginx/sites-enabled/default' \
     --run-command 'mkdir -p /home/n8n/.n8n' \
     --run-command 'chown -R n8n:n8n /home/n8n' \
