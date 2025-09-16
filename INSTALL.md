@@ -68,6 +68,7 @@ chmod +x create_template_script.sh n8n-deploy.sh setup_n8n_script.sh
 entirius-scripts-kvm-deployer/
 ├── create_template_script.sh          # Tworzenie szablonu VM
 ├── n8n-deploy.sh                     # Wdrażanie instancji klientów
+├── n8n-deploy.config.example         # Przykład pliku konfiguracyjnego
 ├── setup_n8n_script.sh              # Konfiguracja n8n
 ├── templates/
 │   └── n8n/
@@ -79,13 +80,27 @@ entirius-scripts-kvm-deployer/
 
 ## Parametry konfiguracyjne
 
-### W pliku `n8n-deploy.sh`:
+### Konfiguracja w pliku `n8n-deploy.config`:
+
+Skopiuj i edytuj plik konfiguracyjny:
 ```bash
+cp n8n-deploy.config.example n8n-deploy.config
+vim n8n-deploy.config
+```
+
+Dostępne parametry konfiguracyjne:
+```bash
+# Konfiguracja domeny
 DOMAIN="yourdomain.com"           # Twoja domena
+
+# Konfiguracja VM
 TEMPLATE_IMAGE="n8n-template.img" # Ścieżka obrazu szablonu
 VM_STORAGE_PATH="/var/lib/libvirt/images" # Lokalizacja przechowywania VM
 VM_MEMORY=1024                    # Pamięć RAM w MB
 VM_VCPUS=1                       # Liczba CPU
+
+# Konfiguracja SSH
+SSH_KEY_FILE="$HOME/.ssh/id_rsa.pub" # Ścieżka do klucza publicznego SSH
 ```
 
 ## Zasoby systemowe

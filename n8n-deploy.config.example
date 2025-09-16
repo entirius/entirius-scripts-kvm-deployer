@@ -1,0 +1,14 @@
+# n8n-deploy.sh Configuration File
+# Copy this file to n8n-deploy.config and customize for your environment
+
+# Domain configuration
+DOMAIN="yourdomain.com"
+
+# VM configuration
+TEMPLATE_IMAGE="n8n-template.img"
+VM_STORAGE_PATH="/var/lib/libvirt/images"
+VM_MEMORY=1024
+VM_VCPUS=1
+
+# SSH configuration
+SSH_KEY_FILE="$HOME/.ssh/id_rsa.pub"

@@ -5,12 +5,15 @@
 
 set -e
 
-# Configuration
-DOMAIN="yourdomain.com"
-TEMPLATE_IMAGE="n8n-template.img"
-VM_STORAGE_PATH="/var/lib/libvirt/images"
-VM_MEMORY=1024
-VM_VCPUS=1
+# Load configuration
+CONFIG_FILE="$(dirname "$0")/n8n-deploy.config"
+if [ ! -f "$CONFIG_FILE" ]; then
+    echo "Error: Configuration file $CONFIG_FILE not found!"
+    echo "Copy n8n-deploy.config.example to n8n-deploy.config and customize it."
+    exit 1
+fi
+
+source "$CONFIG_FILE"
 
 CLIENT_NAME="$1"
 
@@ -48,7 +51,6 @@ if virsh list --all | grep -q "$VM_NAME"; then
 fi
 
 # Check if SSH key exists
-SSH_KEY_FILE="$HOME/.ssh/id_rsa.pub"
 if [ ! -f "$SSH_KEY_FILE" ]; then
     echo "Error: SSH public key not found at $SSH_KEY_FILE"
     echo "Generate one with: ssh-keygen -t rsa -b 4096"

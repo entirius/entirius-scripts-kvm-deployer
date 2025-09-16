@@ -1,0 +1,10 @@
+# Configuration files with sensitive data
+n8n-deploy.config
+
+# Temporary files
+*.tmp
+*.log
+
+# VM disk images (if stored locally)
+*.img
+*.qcow2
