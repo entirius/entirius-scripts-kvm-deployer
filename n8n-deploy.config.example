@@ -7,8 +7,8 @@ DOMAIN="yourdomain.com"
 # VM configuration
 TEMPLATE_IMAGE="n8n-template.img"
 VM_STORAGE_PATH="/var/lib/libvirt/images"
-VM_MEMORY=1024
-VM_VCPUS=1
+VM_MEMORY=4096
+VM_VCPUS=2
 
 # SSH configuration
 SSH_KEY_FILE="$HOME/.ssh/id_ed25519.pub"

@@ -39,7 +39,7 @@ echo "Domain: ${VM_NAME}.${DOMAIN}"
 # Check if template exists
 if [ ! -f "$TEMPLATE_IMAGE" ]; then
     echo "Error: Template image $TEMPLATE_IMAGE not found!"
-    echo "Create it first with: ./create-template.sh"
+    echo "Create it first with: ./n8n-create-template.sh"
     exit 1
 fi
 

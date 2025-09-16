@@ -1,7 +1,7 @@
 #!/bin/bash
 
-# create-template.sh - Creates n8n template VM
-# Usage: ./create-template.sh
+# n8n-create-template.sh - Creates n8n template VM
+# Usage: ./n8n-create-template.sh
 
 set -e
 
@@ -54,4 +54,4 @@ echo "Template created successfully: $TEMPLATE_IMAGE"
 echo "Template size: $(du -h $TEMPLATE_IMAGE | cut -f1)"
 echo ""
 echo "You can now deploy client instances with:"
-echo "./deploy-client.sh <client-name>"
+echo "./n8n-deploy.sh <client-name>"
