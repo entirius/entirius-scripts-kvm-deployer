@@ -1,108 +1,58 @@
 #cloud-config
+package_update: true
+package_upgrade: true
+# Nginx removed from this list
+packages:
+  - curl
 
-# Hostname configuration
-hostname: ${CLIENT_NAME}-n8n
-fqdn: ${CLIENT_NAME}-n8n.${DOMAIN}
-preserve_hostname: true
-
-# User configuration
 users:
   - name: ubuntu
-    ssh_authorized_keys:
-      - ${SSH_KEY}
     sudo: ALL=(ALL) NOPASSWD:ALL
-    groups: sudo
+    groups: users, admin
     shell: /bin/bash
+    ssh_authorized_keys:
+      - ${SSH_PUBLIC_KEY}
 
-# System files
-write_files:
-  - path: /etc/hosts
-    content: |
-      127.0.0.1 localhost
-      127.0.1.1 ${CLIENT_NAME}-n8n ${CLIENT_NAME}-n8n.${DOMAIN}
-    append: false
-    permissions: '0644'
-
-  - path: /home/n8n/.n8n/config
-    content: |
-      {
-        "database": {
-          "type": "sqlite",
-          "database": "/home/n8n/.n8n/database.sqlite"
-        },
-        "endpoints": {
-          "webhook": "https://${CLIENT_NAME}-n8n.${DOMAIN}/",
-          "rest": "https://${CLIENT_NAME}-n8n.${DOMAIN}/"
-        },
-        "nodes": {
-          "exclude": []
-        },
-        "userManagement": {
-          "disabled": true
-        }
-      }
-    permissions: '0644'
-    owner: n8n:n8n
-
-  - path: /etc/environment
-    content: |
-      N8N_HOST=0.0.0.0
-      N8N_PORT=5678
-      N8N_PROTOCOL=http
-      WEBHOOK_URL=https://${CLIENT_NAME}-n8n.${DOMAIN}/
-      N8N_USER_FOLDER=/home/n8n/.n8n
-      CLIENT_NAME=${CLIENT_NAME}
-    append: true
-
-# Package installation
-packages:
-  - htop
-  - curl
-  - wget
-  - ufw
-  - unzip
-  - git
-  - nano
-
-# Commands to run after boot
 runcmd:
-  # Setup n8n for this client
-  - /opt/setup-n8n.sh ${CLIENT_NAME} ${DOMAIN}
-  
-  # Configure firewall
-  - ufw allow 22/tcp
-  - ufw allow 80/tcp
-  - ufw allow 443/tcp
-  - ufw --force enable
-  
-  # Set proper permissions
-  - chown -R n8n:n8n /home/n8n
-  - chmod 755 /home/n8n
-  
-  # Update system
-  - apt-get update
-  - apt-get upgrade -y
-  - apt-get autoremove -y
-  
-  # Disable cloud-init after first run
-  - touch /etc/cloud/cloud-init.disabled
-  - systemctl disable cloud-init
-  - systemctl disable cloud-init-local
-  - systemctl disable cloud-config
-  - systemctl disable cloud-final
-  
-  # Ensure services are running
-  - systemctl daemon-reload
-  - systemctl enable n8n
-  - systemctl start n8n
-  - systemctl reload nginx
-  
-  # Log completion
-  - echo "n8n setup completed for ${CLIENT_NAME}" >> /var/log/setup-complete.log
-  - date >> /var/log/setup-complete.log
+  # Run command block as user 'ubuntu'
+  - sudo -i -u ubuntu bash <<'EOF'
+    # --- Installation of NVM, Node.js, PM2 and n8n ---
+    echo "Installing NVM (Node Version Manager)..."
+    curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash
 
-# Power state
-power_state:
-  mode: reboot
-  delay: now
-  timeout: 30
+    # Load NVM into current session
+    export NVM_DIR="$HOME/.nvm"
+    [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+    [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"
+
+    echo "Installing latest LTS Node.js version..."
+    nvm install --lts
+
+    echo "Installing PM2 and n8n..."
+    npm install -g pm2 n8n
+
+    echo "Creating configuration file for n8n..."
+    mkdir -p ~/.n8n
+    # IMPORTANT: 'host' changed to '0.0.0.0' to listen on all interfaces
+    # Added port :5678 to webhookUrl
+    echo '{
+      "host": "0.0.0.0",
+      "port": 5678,
+      "protocol": "http",
+      "path": "/",
+      "webhookUrl": "http://${DOMAIN}:5678/"
+    }' > ~/.n8n/config.json
+
+    echo "Starting n8n using PM2..."
+    pm2 start n8n
+    
+    echo "Saving PM2 process list..."
+    pm2 save
+  EOF
+
+  # --- PM2 system startup configuration ---
+  - echo "Configuring PM2 for automatic startup..."
+  - 'PM2_STARTUP_CMD=$(sudo -i -u ubuntu pm2 startup | tail -n 1)'
+  - "echo \"Running startup command: $PM2_STARTUP_CMD\""
+  - "$PM2_STARTUP_CMD"
+

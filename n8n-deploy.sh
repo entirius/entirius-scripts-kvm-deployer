@@ -25,7 +25,7 @@ main() {
     check_and_source_config
 
     # Verify system dependencies
-    check_dependencies "wget" "qemu-img" "genisoimage" "virt-install" "virsh"
+    check_dependencies "wget" "qemu-img" "genisoimage" "virt-install" "virsh" "envsubst"
 
     # Prepare images (download, create VM disk)
     prepare_images
@@ -67,7 +67,7 @@ check_dependencies() {
     info "Checking dependencies..."
     for cmd in "$@"; do
         if ! command -v "$cmd" &> /dev/null; then
-            error "Required command not found: '$cmd'. Install the package that provides it (e.g., qemu-utils, virtinst, libvirt-clients, genisoimage)."
+            error "Required command not found: '$cmd'. Install the package that provides it (e.g., qemu-utils, virtinst, libvirt-clients, genisoimage, gettext-base)."
         fi
     done
     success "All dependencies are met."
@@ -106,55 +106,26 @@ prepare_images() {
 }
 
 create_cloud_init_iso() {
-    info "Creating cloud-init configuration file..."
+    info "Creating cloud-init configuration from template..."
     WORK_DIR=$(mktemp -d)
-    
-    # Get the public key
-    SSH_PUBLIC_KEY=$(cat "${SSH_KEY_FILE}")
+    USER_DATA_TEMPLATE="templates/n8n/user_data_template.txt"
 
-    # meta-data file
+    if [ ! -f "$USER_DATA_TEMPLATE" ]; then
+        error "User data template file not found at '${USER_DATA_TEMPLATE}'."
+    fi
+    
+    # Export variables to be used in the template.
+    export SSH_PUBLIC_KEY
+    SSH_PUBLIC_KEY=$(cat "${SSH_KEY_FILE}")
+    export DOMAIN
+
+    # envsubst will read the template and substitute exported variable values.
+    envsubst '${SSH_PUBLIC_KEY},${DOMAIN}' < "${USER_DATA_TEMPLATE}" > "${WORK_DIR}/user-data"
+
+    # meta-data file (remains the same)
     cat <<EOF > "${WORK_DIR}/meta-data"
 instance-id: ${VM_NAME}-$(uuidgen | cut -c -8)
 local-hostname: ${VM_NAME}
-EOF
-
-    # user-data file
-    cat <<EOF > "${WORK_DIR}/user-data"
-#cloud-config
-package_update: true
-package_upgrade: true
-packages:
-  - docker.io
-  - docker-compose
-
-users:
-  - name: ubuntu
-    sudo: ALL=(ALL) NOPASSWD:ALL
-    groups: users, admin, docker
-    shell: /bin/bash
-    ssh_authorized_keys:
-      - ${SSH_PUBLIC_KEY}
-
-runcmd:
-  - 'systemctl enable --now docker'
-  - 'mkdir -p /opt/n8n'
-  - 'cd /opt/n8n'
-  - >
-    echo "version: '3.7'
-    services:
-      n8n:
-        image: n8nio/n8n
-        restart: always
-        ports:
-          - '127.0.0.1:5678:5678'
-        environment:
-          - N8N_HOST=${DOMAIN}
-          - N8N_PORT=5678
-          - N8N_PROTOCOL=http
-          - NODE_ENV=production
-          - WEBHOOK_URL=http://${DOMAIN}/
-          - GENERIC_TIMEZONE=$(timedatectl show --property=Timezone --value)" > docker-compose.yml
-  - 'docker-compose -f /opt/n8n/docker-compose.yml up -d'
 EOF
 
     SEED_ISO_PATH="${VM_STORAGE_PATH}/${VM_NAME}-seed.iso"
@@ -204,9 +175,9 @@ cleanup() {
     if [ -n "${WORK_DIR:-}" ] && [ -d "$WORK_DIR" ]; then
         rm -rf "$WORK_DIR"
     fi
-    sudo rm -f "${VM_STORAGE_PATH}/${VM_NAME}-seed.iso"
     success "Cleanup finished."
 }
+
 
 # === SCRIPT EXECUTION ===
 main
