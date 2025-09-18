@@ -10,6 +10,8 @@ users:
     sudo: ALL=(ALL) NOPASSWD:ALL
     groups: users, admin
     shell: /bin/bash
+    plain_text_passwd: ubuntu
+    lock_passwd: false
     ssh_authorized_keys:
       - ${SSH_PUBLIC_KEY}
 
