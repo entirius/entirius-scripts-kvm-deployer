@@ -101,7 +101,7 @@ prepare_images() {
     
     # Create the disk for the new VM based on the base image
     info "Creating disk for virtual machine '${VM_NAME}' with size ${VM_DISK_SIZE}..."
-    sudo qemu-img create -f qcow2 -b "$BASE_IMAGE_PATH" "$VM_DISK_PATH" "${VM_DISK_SIZE}" || error "Failed to create qcow2 disk."
+    sudo qemu-img create -f qcow2 -F qcow2 -b "$BASE_IMAGE_PATH" "$VM_DISK_PATH" "${VM_DISK_SIZE}" || error "Failed to create qcow2 disk."
     success "Disk images are ready."
 }
 
