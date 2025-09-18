@@ -1,14 +1,21 @@
-# n8n-deploy.sh Configuration File
-# Copy this file to n8n-deploy.config and customize for your environment
+# Configuration file for the n8n-deploy.sh script
+# Copy this file and customize it for your environment
 
-# Domain configuration
-DOMAIN="yourdomain.com"
+# Domain configuration (used by n8n)
+# Set your real domain or use the VM's IP address after installation
+DOMAIN="n8n.yourdomain.com"
 
-# VM configuration
-TEMPLATE_IMAGE="n8n-template.img"
+# Virtual machine name
+VM_NAME="n8n-server"
+
+# Virtual machine configuration
+TEMPLATE_IMAGE="ubuntu-24.04-server-cloudimg-amd64.img"
 VM_STORAGE_PATH="/var/lib/libvirt/images"
-VM_MEMORY=4096
+VM_MEMORY=4096 # in MB
 VM_VCPUS=2
+VM_DISK_SIZE="25G" # Disk size for the new machine
 
-# SSH configuration
+# SSH Configuration
+# Make sure this file exists.
+# It will be used to log into the machine.
 SSH_KEY_FILE="$HOME/.ssh/id_ed25519.pub"

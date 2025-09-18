@@ -37,7 +37,7 @@ done
 echo "Copying base image to template..."
 cp "$BASE_IMAGE" "$TEMPLATE_IMAGE"
 
-# Customize the template with virt-customize
+# Customize the template with virt-customize (uzywa chroot)
 echo "Installing packages and configuring template..."
 echo "This may take 5-10 minutes..."
 

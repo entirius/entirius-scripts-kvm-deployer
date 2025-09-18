@@ -1,110 +1,212 @@
-#!/bin/bash
+#!/usr/bin/env bash
+set -Eeuo pipefail
 
-# n8n-deploy.sh - Deploy n8n instance for a specific client
-# Usage: ./n8n-deploy.sh <client-name>
+# === COLORS AND STYLES ===
+C_RESET='\033[0m'
+C_RED='\033[0;31m'
+C_GREEN='\033[0;32m'
+C_YELLOW='\033[0;33m'
+C_CYAN='\033[0;36m'
+C_BOLD='\033[1m'
 
-set -e
+# === LOGGING FUNCTIONS ===
+info() { echo -e "${C_CYAN}${C_BOLD}[INFO]${C_RESET} $1"; }
+success() { echo -e "${C_GREEN}${C_BOLD}[SUCCESS]${C_RESET} $1"; }
+warn() { echo -e "${C_YELLOW}${C_BOLD}[WARNING]${C_RESET} $1"; }
+error() { echo -e "${C_RED}${C_BOLD}[ERROR]${C_RESET} $1" >&2; exit 1; }
 
-# Load configuration
-CONFIG_FILE="$(dirname "$0")/n8n-deploy.config"
-if [ ! -f "$CONFIG_FILE" ]; then
-    echo "Error: Configuration file $CONFIG_FILE not found!"
-    echo "Copy n8n-deploy.config.example to n8n-deploy.config and customize it."
-    exit 1
-fi
+# === MAIN FUNCTION ===
+main() {
+    clear
+    info "Starting the n8n virtual machine creation process..."
 
-source "$CONFIG_FILE"
+    # Check and load configuration
+    CONFIG_FILE="n8n-deploy.config"
+    check_and_source_config
 
-CLIENT_NAME="$1"
+    # Verify system dependencies
+    check_dependencies "wget" "qemu-img" "genisoimage" "virt-install" "virsh"
 
-if [ -z "$CLIENT_NAME" ]; then
-    echo "Usage: $0 <client_name>"
-    echo "Example: $0 client1"
-    exit 1
-fi
+    # Prepare images (download, create VM disk)
+    prepare_images
 
-# Validate client name (alphanumeric and hyphens only)
-if [[ ! "$CLIENT_NAME" =~ ^[a-zA-Z0-9-]+$ ]]; then
-    echo "Error: Client name must contain only letters, numbers, and hyphens"
-    exit 1
-fi
+    # Create cloud-init file for automatic configuration
+    create_cloud_init_iso
 
-VM_NAME="${CLIENT_NAME}-n8n"
-VM_DISK_PATH="${VM_STORAGE_PATH}/${VM_NAME}.qcow2"
+    # Create and start the virtual machine
+    create_vm
 
-echo "Deploying n8n instance for client: $CLIENT_NAME"
-echo "VM Name: $VM_NAME"
-echo "Domain: ${VM_NAME}.${DOMAIN}"
+    # Wait for an IP address and display the summary
+    wait_for_ip_and_report
 
-# Check if template exists
-if [ ! -f "$TEMPLATE_IMAGE" ]; then
-    echo "Error: Template image $TEMPLATE_IMAGE not found!"
-    echo "Create it first with: ./n8n-create-template.sh"
-    exit 1
-fi
+    # Clean up
+    cleanup
+    
+    success "Deployment completed successfully!"
+    echo -e "\nYour n8n instance should be available at: ${C_YELLOW}http://${VM_IP}:5678${C_RESET}"
+    echo -e "You can log into the machine via SSH: ${C_YELLOW}ssh ubuntu@${VM_IP}${C_RESET}\n"
+}
 
-# Check if VM already exists
-if virsh list --all | grep -q "$VM_NAME"; then
-    echo "Error: VM $VM_NAME already exists!"
-    echo "Remove it first with: virsh destroy $VM_NAME && virsh undefine $VM_NAME --remove-all-storage"
-    exit 1
-fi
+# === HELPER FUNCTIONS ===
 
-# Check if SSH key exists
-if [ ! -f "$SSH_KEY_FILE" ]; then
-    echo "Error: SSH public key not found at $SSH_KEY_FILE"
-    echo "Generate one with: ssh-keygen -t ed25519 -C \"your-email@example.com\""
-    exit 1
-fi
+check_and_source_config() {
+    info "Checking configuration file..."
+    if [ ! -f "$CONFIG_FILE" ]; then
+        error "Configuration file '${CONFIG_FILE}' not found."
+    fi
+    # shellcheck source=n8n-deploy.config
+    source "$CONFIG_FILE"
+    
+    if [ ! -f "$SSH_KEY_FILE" ]; then
+        error "SSH public key file '${SSH_KEY_FILE}' does not exist. Check the path in the configuration."
+    fi
+    success "Configuration loaded."
+}
 
-SSH_KEY="$(cat $SSH_KEY_FILE)"
+check_dependencies() {
+    info "Checking dependencies..."
+    for cmd in "$@"; do
+        if ! command -v "$cmd" &> /dev/null; then
+            error "Required command not found: '$cmd'. Install the package that provides it (e.g., qemu-utils, virtinst, libvirt-clients, genisoimage)."
+        fi
+    done
+    success "All dependencies are met."
+}
 
-# Export variables for envsubst
-export CLIENT_NAME DOMAIN SSH_KEY
+prepare_images() {
+    BASE_IMAGE_URL="https://cloud-images.ubuntu.com/noble/current/noble-server-cloudimg-amd64.img"
+    BASE_IMAGE_PATH="${VM_STORAGE_PATH}/${TEMPLATE_IMAGE}"
+    VM_DISK_PATH="${VM_STORAGE_PATH}/${VM_NAME}.qcow2"
 
-echo "Generating cloud-init configuration..."
-envsubst < templates/n8n/user_data_template.txt > "/tmp/${VM_NAME}-user-data.yaml"
+    info "Preparing disk images..."
+    
+    # Check if the image directory exists
+    if [ ! -d "$VM_STORAGE_PATH" ]; then
+        warn "Directory '${VM_STORAGE_PATH}' does not exist. Creating it..."
+        sudo mkdir -p "$VM_STORAGE_PATH" || error "Failed to create directory '${VM_STORAGE_PATH}'."
+    fi
 
-echo "Copying template to VM disk..."
-sudo cp "$TEMPLATE_IMAGE" "$VM_DISK_PATH"
-sudo chown libvirt-qemu:kvm "$VM_DISK_PATH"
+    # Download the base image if it doesn't exist
+    if [ ! -f "$BASE_IMAGE_PATH" ]; then
+        info "Downloading Ubuntu 24.04 Cloud Image..."
+        sudo wget -O "$BASE_IMAGE_PATH" "$BASE_IMAGE_URL" || error "Base image download failed."
+    else
+        info "Base Ubuntu 24.04 image already exists."
+    fi
 
-echo "Creating VM..."
-virt-install \
-    --name "$VM_NAME" \
-    --memory $VM_MEMORY \
-    --vcpus $VM_VCPUS \
-    --disk path="$VM_DISK_PATH",format=qcow2 \
-    --import \
-    --cloud-init user-data="/tmp/${VM_NAME}-user-data.yaml" \
-    --network network=default \
-    --graphics vnc,listen=0.0.0.0 \
-    --noautoconsole \
-    --os-variant ubuntu24.04
+    # Check if a VM with the same name already exists
+    if sudo virsh dominfo "${VM_NAME}" &> /dev/null; then
+        error "A virtual machine named '${VM_NAME}' already exists. Aborting."
+    fi
+    
+    # Create the disk for the new VM based on the base image
+    info "Creating disk for virtual machine '${VM_NAME}' with size ${VM_DISK_SIZE}..."
+    sudo qemu-img create -f qcow2 -b "$BASE_IMAGE_PATH" "$VM_DISK_PATH" "${VM_DISK_SIZE}" || error "Failed to create qcow2 disk."
+    success "Disk images are ready."
+}
 
-echo ""
-echo "✅ VM $VM_NAME created successfully!"
-echo ""
-echo "VM Details:"
-echo "  Name: $VM_NAME"
-echo "  Memory: ${VM_MEMORY}MB"
-echo "  CPUs: $VM_VCPUS"
-echo "  Disk: $VM_DISK_PATH"
-echo ""
-echo "Access Information:"
-echo "  n8n Web UI: http://${VM_NAME}.${DOMAIN} (after VM boots)"
-echo "  Direct access: http://[VM_IP]:5678"
-echo "  SSH: ssh ubuntu@[VM_IP]"
-echo ""
-echo "Monitoring:"
-echo "  VM status: virsh list"
-echo "  Console: virsh console $VM_NAME"
-echo "  VNC: virsh vncdisplay $VM_NAME"
-echo ""
-echo "The VM is starting up. n8n will be available in 2-3 minutes."
+create_cloud_init_iso() {
+    info "Creating cloud-init configuration file..."
+    WORK_DIR=$(mktemp -d)
+    
+    # Get the public key
+    SSH_PUBLIC_KEY=$(cat "${SSH_KEY_FILE}")
 
-# Cleanup
-rm "/tmp/${VM_NAME}-user-data.yaml"
+    # meta-data file
+    cat <<EOF > "${WORK_DIR}/meta-data"
+instance-id: ${VM_NAME}-$(uuidgen | cut -c -8)
+local-hostname: ${VM_NAME}
+EOF
 
-echo ""
-echo "To get VM IP address: virsh net-dhcp-leases default"
+    # user-data file
+    cat <<EOF > "${WORK_DIR}/user-data"
+#cloud-config
+package_update: true
+package_upgrade: true
+packages:
+  - docker.io
+  - docker-compose
+
+users:
+  - name: ubuntu
+    sudo: ALL=(ALL) NOPASSWD:ALL
+    groups: users, admin, docker
+    shell: /bin/bash
+    ssh_authorized_keys:
+      - ${SSH_PUBLIC_KEY}
+
+runcmd:
+  - 'systemctl enable --now docker'
+  - 'mkdir -p /opt/n8n'
+  - 'cd /opt/n8n'
+  - >
+    echo "version: '3.7'
+    services:
+      n8n:
+        image: n8nio/n8n
+        restart: always
+        ports:
+          - '127.0.0.1:5678:5678'
+        environment:
+          - N8N_HOST=${DOMAIN}
+          - N8N_PORT=5678
+          - N8N_PROTOCOL=http
+          - NODE_ENV=production
+          - WEBHOOK_URL=http://${DOMAIN}/
+          - GENERIC_TIMEZONE=$(timedatectl show --property=Timezone --value)" > docker-compose.yml
+  - 'docker-compose -f /opt/n8n/docker-compose.yml up -d'
+EOF
+
+    SEED_ISO_PATH="${VM_STORAGE_PATH}/${VM_NAME}-seed.iso"
+    info "Generating cloud-init ISO image..."
+    sudo genisoimage -output "${SEED_ISO_PATH}" -volid cidata -joliet -rock "${WORK_DIR}/user-data" "${WORK_DIR}/meta-data" || error "Failed to generate ISO image."
+    
+    # Set permissions for libvirt to read the files
+    sudo chmod 644 "${VM_STORAGE_PATH}/${VM_NAME}"*
+    
+    success "cloud-init ISO image created successfully."
+}
+
+create_vm() {
+    info "Creating virtual machine '${VM_NAME}'..."
+    sudo virt-install \
+        --name "${VM_NAME}" \
+        --virt-type kvm \
+        --memory "${VM_MEMORY}" \
+        --vcpus "${VM_VCPUS}" \
+        --os-variant ubuntu24.04 \
+        --disk path="${VM_STORAGE_PATH}/${VM_NAME}.qcow2",device=disk,bus=virtio \
+        --disk path="${VM_STORAGE_PATH}/${VM_NAME}-seed.iso",device=cdrom \
+        --import \
+        --network network=default,model=virtio \
+        --graphics none \
+        --noautoconsole || error "Failed to create virtual machine."
+    success "Virtual machine '${VM_NAME}' has been created and started."
+}
+
+wait_for_ip_and_report() {
+    info "Waiting for an IP address from DHCP (this may take a minute)..."
+    for i in {1..30}; do
+        VM_IP=$(sudo virsh domifaddr "${VM_NAME}" | awk '/ipv4/ {print $4}' | cut -d'/' -f1)
+        if [ -n "$VM_IP" ]; then
+            success "Virtual machine received IP address: ${C_YELLOW}${VM_IP}${C_RESET}"
+            return 0
+        fi
+        echo -n "."
+        sleep 5
+    done
+    echo ""
+    error "Failed to get an IP address for machine '${VM_NAME}'. Check your libvirt network configuration."
+}
+
+cleanup() {
+    info "Cleaning up temporary files..."
+    if [ -n "${WORK_DIR:-}" ] && [ -d "$WORK_DIR" ]; then
+        rm -rf "$WORK_DIR"
+    fi
+    sudo rm -f "${VM_STORAGE_PATH}/${VM_NAME}-seed.iso"
+    success "Cleanup finished."
+}
+
+# === SCRIPT EXECUTION ===
+main
