@@ -5,8 +5,16 @@
 
 set -e
 
-BASE_IMAGE="ubuntu-24.04-server-cloudimg-amd64.img"
-TEMPLATE_IMAGE="n8n-template.img"
+# Load configuration
+if [ -f "n8n-deploy.config" ]; then
+    source n8n-deploy.config
+else
+    echo "Error: Configuration file n8n-deploy.config not found!"
+    exit 1
+fi
+
+BASE_IMAGE="$VM_STORAGE_PATH/ubuntu-24.04-server-cloudimg-amd64.img"
+TEMPLATE_IMAGE="$VM_STORAGE_PATH/n8n-template.img"
 
 echo "Creating n8n template VM..."
 
