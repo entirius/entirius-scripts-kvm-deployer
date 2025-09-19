@@ -124,7 +124,7 @@ create_cloud_init_iso() {
     envsubst '${SSH_PUBLIC_KEY},${DOMAIN}' < "${USER_DATA_TEMPLATE}" > "${WORK_DIR}/user-data"
 
     # Ensure template file is valid
-    cloud-init schema --config-file "${WORK_DIR}/user-data" || error "Invalid cloud-init user-data file."
+    cloud-init schema --config-file "${WORK_DIR}/user-data" || error "Invalid cloud-init user-data file. Check files in tmp dir: ${WORK_DIR}"
 
     # meta-data file (remains the same)
     cat <<EOF > "${WORK_DIR}/meta-data"
@@ -184,8 +184,7 @@ wait_for_ip_and_report() {
 cleanup() {
     info "Cleaning up temporary files..."
     if [ -n "${WORK_DIR:-}" ] && [ -d "$WORK_DIR" ]; then
-        echo "ZTODO: skip cleanup workdir: ${WORK_DIR}"
-        #rm -rf "$WORK_DIR"
+        rm -rf "$WORK_DIR"
     fi
     success "Cleanup finished."
 }
