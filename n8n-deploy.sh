@@ -44,7 +44,9 @@ main() {
     
     success "Deployment completed successfully!"
     echo -e "\nYour n8n instance should be available at: ${C_YELLOW}http://${VM_IP}:5678${C_RESET}"
-    echo -e "You can log into the machine via SSH: ${C_YELLOW}ssh ubuntu@${VM_IP}${C_RESET}\n"
+    echo -e "You can log into the machine via SSH: ${C_YELLOW}ssh ubuntu@${VM_IP}${C_RESET}"
+    echo -e "If SSH doesn't work, you can access the console with: ${C_YELLOW}virsh console ${VM_NAME}${C_RESET}"
+    echo -e "To exit console mode, press ${C_YELLOW}Ctrl+]${C_RESET}\n"
 }
 
 # === HELPER FUNCTIONS ===
@@ -74,7 +76,6 @@ check_dependencies() {
 }
 
 prepare_images() {
-    BASE_IMAGE_URL="https://cloud-images.ubuntu.com/noble/current/noble-server-cloudimg-amd64.img"
     BASE_IMAGE_PATH="${VM_STORAGE_PATH}/${TEMPLATE_IMAGE}"
     VM_DISK_PATH="${VM_STORAGE_PATH}/${VM_NAME}.qcow2"
 
@@ -122,6 +123,9 @@ create_cloud_init_iso() {
     # envsubst will read the template and substitute exported variable values.
     envsubst '${SSH_PUBLIC_KEY},${DOMAIN}' < "${USER_DATA_TEMPLATE}" > "${WORK_DIR}/user-data"
 
+    # Ensure template file is valid
+    cloud-init schema --config-file "${WORK_DIR}/user-data" || error "Invalid cloud-init user-data file."
+
     # meta-data file (remains the same)
     cat <<EOF > "${WORK_DIR}/meta-data"
 instance-id: ${VM_NAME}-$(uuidgen | cut -c -8)
@@ -130,6 +134,7 @@ EOF
 
     SEED_ISO_PATH="${VM_STORAGE_PATH}/${VM_NAME}-seed.iso"
     info "Generating cloud-init ISO image..."
+    sudo rm -f "${SEED_ISO_PATH}"
     sudo genisoimage -output "${SEED_ISO_PATH}" -volid cidata -joliet -rock "${WORK_DIR}/user-data" "${WORK_DIR}/meta-data" || error "Failed to generate ISO image."
     
     # Set permissions for libvirt to read the files
@@ -151,9 +156,15 @@ create_vm() {
         --import \
         --network network=default,model=virtio \
         --graphics none \
+        --console pty,target_type=serial \
+        --serial pty \
         --noautoconsole || error "Failed to create virtual machine."
     success "Virtual machine '${VM_NAME}' has been created and started."
 }
+
+# waiting for dhcp
+#        --network bridge=virbr0,model=virtio \
+# --noautoconsole console does not open automatically after VM creation
 
 wait_for_ip_and_report() {
     info "Waiting for an IP address from DHCP (this may take a minute)..."
@@ -173,7 +184,8 @@ wait_for_ip_and_report() {
 cleanup() {
     info "Cleaning up temporary files..."
     if [ -n "${WORK_DIR:-}" ] && [ -d "$WORK_DIR" ]; then
-        rm -rf "$WORK_DIR"
+        echo "ZTODO: skip cleanup workdir: ${WORK_DIR}"
+        #rm -rf "$WORK_DIR"
     fi
     success "Cleanup finished."
 }

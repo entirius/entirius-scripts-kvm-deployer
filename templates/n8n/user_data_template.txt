@@ -1,14 +1,14 @@
 #cloud-config
-package_update: true
-package_upgrade: true
+package_update: false
+package_upgrade: false
 # Nginx removed from this list
 packages:
   - curl
 
 users:
   - name: ubuntu
-    sudo: ALL=(ALL) NOPASSWD:ALL
     groups: users, admin
+    sudo: ALL=(ALL) NOPASSWD:ALL
     shell: /bin/bash
     plain_text_passwd: ubuntu
     lock_passwd: false
@@ -16,9 +16,9 @@ users:
       - ${SSH_PUBLIC_KEY}
 
 runcmd:
-  # Run command block as user 'ubuntu'
-  - sudo -i -u ubuntu bash <<'EOF'
-    # --- Installation of NVM, Node.js, PM2 and n8n ---
+  # --- Installation of NVM, Node.js, PM2 and n8n ---
+  - |
+    sudo -i -u ubuntu bash <<'EOF'
     echo "Installing NVM (Node Version Manager)..."
     curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash
 
@@ -50,7 +50,7 @@ runcmd:
     
     echo "Saving PM2 process list..."
     pm2 save
-  EOF
+    EOF
 
   # --- PM2 system startup configuration ---
   - echo "Configuring PM2 for automatic startup..."
