@@ -109,7 +109,7 @@ prepare_images() {
 create_cloud_init_iso() {
     info "Creating cloud-init configuration from template..."
     WORK_DIR=$(mktemp -d)
-    USER_DATA_TEMPLATE="templates/n8n/user_data_template.txt"
+    USER_DATA_TEMPLATE="templates/n8n/user_data_template..yaml.tpl"
 
     if [ ! -f "$USER_DATA_TEMPLATE" ]; then
         error "User data template file not found at '${USER_DATA_TEMPLATE}'."

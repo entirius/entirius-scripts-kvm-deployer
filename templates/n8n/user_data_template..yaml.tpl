@@ -39,10 +39,10 @@ runcmd:
     # Added port :5678 to webhookUrl
     echo '{
       "host": "0.0.0.0",
-      "port": 5678,
-      "protocol": "http",
+      "port": 80,
+      "protocol": "https",
       "path": "/",
-      "webhookUrl": "http://${DOMAIN}:5678/"
+      "webhookUrl": "https://${DOMAIN}/"
     }' > ~/.n8n/config.json
 
     echo "Starting n8n using PM2..."
