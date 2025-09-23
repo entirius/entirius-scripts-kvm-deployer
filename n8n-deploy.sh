@@ -43,7 +43,7 @@ main() {
     cleanup
     
     success "Deployment completed successfully!"
-    echo -e "\nYour n8n instance should be available at: ${C_YELLOW}http://${VM_IP}:5678${C_RESET}"
+    echo -e "\nYour n8n instance should be available at: ${C_YELLOW}http://${VM_IP}:80${C_RESET}"
     echo -e "You can log into the machine via SSH: ${C_YELLOW}ssh ubuntu@${VM_IP}${C_RESET}"
     echo -e "If SSH doesn't work, you can access the console with: ${C_YELLOW}virsh console ${VM_NAME}${C_RESET}"
     echo -e "To exit console mode, press ${C_YELLOW}Ctrl+]${C_RESET}\n"
@@ -118,10 +118,10 @@ create_cloud_init_iso() {
     # Export variables to be used in the template.
     export SSH_PUBLIC_KEY
     SSH_PUBLIC_KEY=$(cat "${SSH_KEY_FILE}")
-    export DOMAIN
+    export DOMAIN INSTANCE_IP
 
     # envsubst will read the template and substitute exported variable values.
-    envsubst '${SSH_PUBLIC_KEY},${DOMAIN}' < "${USER_DATA_TEMPLATE}" > "${WORK_DIR}/user-data"
+    envsubst '${SSH_PUBLIC_KEY},${DOMAIN},${INSTANCE_IP}' < "${USER_DATA_TEMPLATE}" > "${WORK_DIR}/user-data"
 
     # Ensure template file is valid
     cloud-init schema --config-file "${WORK_DIR}/user-data" || error "Invalid cloud-init user-data file. Check files in tmp dir: ${WORK_DIR}"
