@@ -1,20 +1,5 @@
 #cloud-config
 write_files:
-  - path: /etc/netplan/50-cloud-init.yaml
-    permissions: '0600'
-    content: |
-      network:
-        version: 2
-        ethernets:
-          enp1s0:
-            dhcp4: false
-            addresses:
-              - ${INSTANCE_IP}/24
-            routes:
-              - to: default
-                via: 192.168.122.1
-            nameservers:
-              addresses: [192.168.122.1, 8.8.8.8, 1.1.1.1]
   - path: /opt/start-n8n.sh
     permissions: '0755'
     content: |
@@ -29,6 +14,8 @@ package_upgrade: false
 packages:
   - curl
   - libcap2-bin
+  - postgresql
+  - postgresql-contrib
 
 users:
   - name: ubuntu
@@ -41,7 +28,6 @@ users:
       - ${SSH_PUBLIC_KEY}
 
 runcmd:
-  # You are root now
   # --- Wait for network connectivity ---
   - |
     echo "Applying static network configuration..."
@@ -66,6 +52,15 @@ runcmd:
       exit 1
     fi
 
+  # --- Installation of PostgreSQL ---
+  - |
+    echo "Configuring PostgreSQL database..."
+    # Uruchomienie poleceń jako systemowy użytkownik 'postgres'
+    sudo -i -u postgres psql -c "CREATE USER ${DB_USER} WITH PASSWORD '${DB_PASSWORD}';"
+    sudo -i -u postgres psql -c "CREATE DATABASE ${DB_NAME} OWNER ${DB_USER};"
+    sudo -i -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE ${DB_NAME} TO ${DB_USER};"
+    echo "PostgreSQL user and database created successfully."
+
   # --- Installation of NVM, Node.js and n8n ---
   - |
     sudo -i -u ubuntu bash <<'EOF'
@@ -83,6 +78,9 @@ runcmd:
     node --version
     npm --version
 
+    echo "Installing pg libs..."
+    npm install -g pg
+
     echo "Installing n8n globally..."
     npm install -g n8n
 
@@ -96,6 +94,15 @@ runcmd:
     N8N_PORT=80
     N8N_EMAIL_MODE=smtp
     N8N_SMTP_HOST=smtp.emaillabs.net.pl
+
+    # PostgreSQL Database Settings
+    DB_TYPE=postgresdb
+    DB_POSTGRESDB_HOST=${DB_HOST}
+    DB_POSTGRESDB_PORT=${DB_PORT}
+    DB_POSTGRESDB_DATABASE=${DB_NAME}
+    DB_POSTGRESDB_USER=${DB_USER}
+    DB_POSTGRESDB_PASSWORD=${DB_PASSWORD}
+    DB_POSTGRESDB_SCHEMA=${DB_SCHEMA}
     EOT
 
     EOF
@@ -116,7 +123,7 @@ runcmd:
     sudo cat <<EOT > /etc/systemd/system/n8n.service
     [Unit]
     Description=n8n workflow automation tool
-    After=network.target
+    After=network.target postgresql.service
 
     [Service]
     Type=simple

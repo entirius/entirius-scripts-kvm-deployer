@@ -118,10 +118,12 @@ create_cloud_init_iso() {
     # Export variables to be used in the template.
     export SSH_PUBLIC_KEY
     SSH_PUBLIC_KEY=$(cat "${SSH_KEY_FILE}")
-    export DOMAIN INSTANCE_IP
 
-    # envsubst will read the template and substitute exported variable values.
-    envsubst '${SSH_PUBLIC_KEY},${DOMAIN},${INSTANCE_IP}' < "${USER_DATA_TEMPLATE}" > "${WORK_DIR}/user-data"
+    # Export all required variables for the template
+    export DOMAIN DB_HOST DB_PORT DB_NAME DB_USER DB_PASSWORD DB_SCHEMA
+
+    # envsubst will substitute all exported variables in the template
+    envsubst '${SSH_PUBLIC_KEY},${DOMAIN},${DB_HOST},${DB_PORT},${DB_NAME},${DB_USER},${DB_PASSWORD},${DB_SCHEMA}' < "${USER_DATA_TEMPLATE}" > "${WORK_DIR}/user-data"
 
     # Ensure template file is valid
     cloud-init schema --config-file "${WORK_DIR}/user-data" || error "Invalid cloud-init user-data file. Check files in tmp dir: ${WORK_DIR}"
