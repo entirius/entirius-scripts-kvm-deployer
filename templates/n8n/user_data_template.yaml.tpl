@@ -22,7 +22,7 @@ users:
     groups: users, admin
     sudo: ALL=(ALL) NOPASSWD:ALL
     shell: /bin/bash
-    plain_text_passwd: ${WEBAPP_USER}
+    plain_text_passwd: ${WEBAPP_PASSWORD}
     lock_passwd: false
     ssh_authorized_keys:
       - ${SSH_PUBLIC_KEY}
@@ -88,12 +88,20 @@ runcmd:
     mkdir -p ~/.n8n
 
     cat <<EOT >> ~/.n8n/.env
-    WEBHOOK_URL=https://${DOMAIN}
-    WEBHOOK_TUNNEL_URL=https://${DOMAIN}
+    # Application host and port
     N8N_HOST=0.0.0.0
     N8N_PORT=80
+
+    # Public address of the n8n instance
+    WEBHOOK_URL=https://${DOMAIN}
+    WEBHOOK_TUNNEL_URL=https://${DOMAIN}
+    N8N_EDITOR_BASE_URL=https://${DOMAIN}/
+
+    # E-mail (SMTP)
     N8N_EMAIL_MODE=smtp
     N8N_SMTP_HOST=smtp.emaillabs.net.pl
+    N8N_RUNNERS_ENABLED=true
+    N8N_BLOCK_ENV_ACCESS_IN_NODE=true
 
     # PostgreSQL Database Settings
     DB_TYPE=postgresdb
@@ -103,6 +111,15 @@ runcmd:
     DB_POSTGRESDB_USER=${DB_USER}
     DB_POSTGRESDB_PASSWORD=${DB_PASSWORD}
     DB_POSTGRESDB_SCHEMA=${DB_SCHEMA}
+
+    # # Recommended settings for future releases
+    N8N_RUNNERS_ENABLED=true
+    N8N_BLOCK_ENV_ACCESS_IN_NODE=true
+
+    # Additional options for production mode
+    N8N_PUBLIC_API_DISABLED=false   # disable public API if not needed
+    N8N_DIAGNOSTICS_ENABLED=false   # turn off telemetry
+    N8N_VERSION_NOTIFICATIONS_ENABLED=false  # notifications about new versions
     EOT
 
     EOF

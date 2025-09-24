@@ -4,6 +4,8 @@
 # Domain configuration (used by n8n)
 # Set your real domain or use the VM's IP address after installation
 DOMAIN="n8n.yourdomain.com"
+WEBAPP_USER="webapp"
+WEBAPP_PASSWORD="YOUR-PASSWORD" # set your plain pass here
 
 # Virtual machine name
 VM_NAME="vm-company-production-n8n"
