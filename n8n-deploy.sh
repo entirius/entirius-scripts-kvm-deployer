@@ -43,9 +43,9 @@ main() {
     cleanup
     
     success "Deployment completed successfully!"
-    echo -e "\nYour n8n instance should be available at: ${C_YELLOW}http://${VM_IP}:80${C_RESET}"
-    echo -e "You can log into the machine via SSH: ${C_YELLOW}ssh ubuntu@${VM_IP}${C_RESET}"
-    echo -e "If SSH doesn't work, you can access the console with: ${C_YELLOW}virsh console ${VM_NAME}${C_RESET}"
+    echo -e "\nYour n8n instance will be available at: ${C_YELLOW}http://${VM_IP}:80${C_RESET}"
+    echo -e "You can log into the machine via SSH: ${C_YELLOW}ssh ${WEBAPP_USER}@${VM_IP}${C_RESET}"
+    echo -e "You can access the console with: ${C_YELLOW}virsh console ${VM_NAME}${C_RESET}"
     echo -e "To exit console mode, press ${C_YELLOW}Ctrl+]${C_RESET}\n"
 }
 
@@ -109,7 +109,7 @@ prepare_images() {
 create_cloud_init_iso() {
     info "Creating cloud-init configuration from template..."
     WORK_DIR=$(mktemp -d)
-    USER_DATA_TEMPLATE="templates/n8n/user_data_template..yaml.tpl"
+    USER_DATA_TEMPLATE="templates/n8n/user_data_template.yaml.tpl"
 
     if [ ! -f "$USER_DATA_TEMPLATE" ]; then
         error "User data template file not found at '${USER_DATA_TEMPLATE}'."
@@ -120,10 +120,10 @@ create_cloud_init_iso() {
     SSH_PUBLIC_KEY=$(cat "${SSH_KEY_FILE}")
 
     # Export all required variables for the template
-    export DOMAIN DB_HOST DB_PORT DB_NAME DB_USER DB_PASSWORD DB_SCHEMA
+    export DOMAIN DB_HOST DB_PORT DB_NAME DB_USER DB_PASSWORD DB_SCHEMA WEBAPP_USER
 
     # envsubst will substitute all exported variables in the template
-    envsubst '${SSH_PUBLIC_KEY},${DOMAIN},${DB_HOST},${DB_PORT},${DB_NAME},${DB_USER},${DB_PASSWORD},${DB_SCHEMA}' < "${USER_DATA_TEMPLATE}" > "${WORK_DIR}/user-data"
+    envsubst '${SSH_PUBLIC_KEY},${DOMAIN},${DB_HOST},${DB_PORT},${DB_NAME},${DB_USER},${DB_PASSWORD},${DB_SCHEMA},${WEBAPP_USER}' < "${USER_DATA_TEMPLATE}" > "${WORK_DIR}/user-data"
 
     # Ensure template file is valid
     cloud-init schema --config-file "${WORK_DIR}/user-data" || error "Invalid cloud-init user-data file. Check files in tmp dir: ${WORK_DIR}"

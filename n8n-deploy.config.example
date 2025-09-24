@@ -22,7 +22,7 @@ VM_DISK_SIZE="25G" # Disk size for the new machine
 SSH_KEY_FILE="$HOME/.ssh/id_ed25519.pub"
 
 # Set these variables to connect n8n to your PostgreSQL database
-DB_HOST="localhost" # <-- ZMIANA
+DB_HOST="localhost"
 DB_PORT="5432"
 DB_NAME="n8n"
 DB_USER="n8n"

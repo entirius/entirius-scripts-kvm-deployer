@@ -4,7 +4,7 @@ write_files:
     permissions: '0755'
     content: |
       #!/bin/bash
-      export NVM_DIR="/home/ubuntu/.nvm"
+      export NVM_DIR="/home/${WEBAPP_USER}/.nvm"
       [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
       exec n8n
 
@@ -18,11 +18,11 @@ packages:
   - postgresql-contrib
 
 users:
-  - name: ubuntu
+  - name: ${WEBAPP_USER}
     groups: users, admin
     sudo: ALL=(ALL) NOPASSWD:ALL
     shell: /bin/bash
-    plain_text_passwd: ubuntu
+    plain_text_passwd: ${WEBAPP_USER}
     lock_passwd: false
     ssh_authorized_keys:
       - ${SSH_PUBLIC_KEY}
@@ -63,7 +63,7 @@ runcmd:
 
   # --- Installation of NVM, Node.js and n8n ---
   - |
-    sudo -i -u ubuntu bash <<'EOF'
+    sudo -i -u ${WEBAPP_USER} bash <<'EOF'
     echo "Installing NVM (Node Version Manager)..."
     curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash
 
@@ -111,9 +111,9 @@ runcmd:
   - |
     echo "Configuring n8n systemd service..."
 
-    # Find the paths to node and n8n binaries within the ubuntu user's nvm installation
-    N8N_PATH=$(sudo -i -u ubuntu bash -c 'source ~/.nvm/nvm.sh && which n8n')
-    NODE_PATH=$(sudo -i -u ubuntu bash -c 'source ~/.nvm/nvm.sh && which node')
+    # Find the paths to node and n8n binaries within the ${WEBAPP_USER} user's nvm installation
+    N8N_PATH=$(sudo -i -u ${WEBAPP_USER} bash -c 'source ~/.nvm/nvm.sh && which n8n')
+    NODE_PATH=$(sudo -i -u ${WEBAPP_USER} bash -c 'source ~/.nvm/nvm.sh && which node')
 
     # Grant Node.js binary the capability to bind to privileged ports
     echo "Granting node binary permissions to use port 80..."
@@ -127,10 +127,10 @@ runcmd:
 
     [Service]
     Type=simple
-    User=ubuntu
-    Group=ubuntu
-    WorkingDirectory=/home/ubuntu/.n8n
-    EnvironmentFile=/home/ubuntu/.n8n/.env
+    User=${WEBAPP_USER}
+    Group=${WEBAPP_USER}
+    WorkingDirectory=/home/${WEBAPP_USER}/.n8n
+    EnvironmentFile=/home/${WEBAPP_USER}/.n8n/.env
     ExecStart=/opt/start-n8n.sh
     Restart=on-failure
     RestartSec=5s
