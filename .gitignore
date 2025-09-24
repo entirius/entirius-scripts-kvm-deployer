@@ -8,3 +8,6 @@ n8n-deploy.config
 # VM disk images (if stored locally)
 *.img
 *.qcow2
+
+# Claude
+.claude
