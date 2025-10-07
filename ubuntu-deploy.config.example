@@ -1,0 +1,26 @@
+# Configuration file for the ubuntu-deploy.sh script
+# Copy this file and customize it for your environment
+
+# Domain configuration (used by ubuntu)
+# Set your real domain or use the VM's IP address after installation
+DOMAIN="ubuntu.yourdomain.com"
+WEBAPP_USER="ubuntu"
+WEBAPP_PASSWORD="ubuntu" # set your plain pass here
+
+# Virtual machine name
+VM_NAME="vm-company-production-ubuntu"
+
+# Virtual machine configuration
+BASE_IMAGE_URL="https://cloud-images.ubuntu.com/releases/24.04/release/ubuntu-24.04-server-cloudimg-amd64.img"
+TEMPLATE_IMAGE="ubuntu-24.04-server-cloudimg-amd64.img"
+VM_STORAGE_PATH="/var/lib/libvirt/images"
+VM_MEMORY=4096 # in MB
+VM_VCPUS=2
+VM_DISK_SIZE="25G" # Disk size for the new machine
+
+# SSH Configuration
+# Make sure this file exists.
+# It will be used to log into the machine.
+SSH_KEY_FILE="$HOME/.ssh/id_ed25519.pub"
+
+
